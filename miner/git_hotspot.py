@@ -2,10 +2,11 @@
 #  git log --all --numstat --date=short --pretty=format:'--%h--%ad--%aN' --no-renames --after=2019-01-01  | this
 import re
 import sys
+import git_it
 
 from collections import Counter
 
-commit_pattern = r"^--(?P<rev>\w{5,8})--(?P<year>\d{4})-(?P<month>\d{2})-(?P<day>\d{2})--(?P<author>.*)$"
+commit_pattern = r"'--(?P<rev>\w*)--(?P<year>\d{4})-(?P<month>\d{2})-(?P<day>\d{2})--(?P<author>.*)'"
 commit_matcher = re.compile(commit_pattern)
 
 diff_pattern = r"^(?P<added>(\d+|-))\s(?P<deleted>(\d+|-))\s(?P<filename>.*)$"
@@ -32,6 +33,7 @@ class Project:
 
     def touch_top(self):
         """ How many times was a file touched"""
+        print(f"Show touch top for {len(self.edits)} edits")
         counter = Counter()
         for e in self.edits:
             counter.update({e.filename: 1})
@@ -42,6 +44,7 @@ class Project:
 
     def edits_top(self):
         """ How many times was a file touched"""
+        print(f"Show edit top for {len(self.edits)} edits")
         counter = Counter()
         for e in self.edits:
             counter.update({e.filename: e.added+ e.deleted})
@@ -75,11 +78,9 @@ class Parser:
         self.project = project
 
     def start_commit(self, data):
-#        print(f"start commit {data.groupdict()}")
         if self.cur:
             for e in self.cur:
                 self.project.add(e)
-#            print(self.cur)
         self.cur = Commit(data)
 
     def add_diff(self, data):
@@ -100,13 +101,15 @@ class Parser:
             if m:
                 self.add_diff(m)
             else:
-                print(f"no match om \"{line}\"")
+                print(f"no match for \"{line}\"")
 
 def run():
     project = Project()
     parser = project.parser
-    for line in sys.stdin:
-        parser.read_line(line.strip());
+    flags = ["--all", "--numstat",  "--date=short",  "--pretty=format:'--%h--%ad--%aN'",  "--no-renames",  "--after=2019-10-10"]
+    git_it.map_log(lambda line : parser.read_line(line),  flags, "/home/jacob/srcs/emacs")
+    # for line in sys.stdin:
+    #     parser.read_line(line.strip());
     project.touch_top()
     project.edits_top()
 
